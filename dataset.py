@@ -8,6 +8,8 @@ from torch.utils.data import TensorDataset, DataLoader, RandomSampler, Sequentia
 from utils import *
 from preprocess import preprocess_fn
 
+import torch_xla.core.xla_model as xm
+
 def load_dataset_by_filepath(cfg, file_path=None, tokenizer= None):
 		if file_path is None or os.path.exists(file_path) is False:
 			print(f"{file_path} not found!")
@@ -45,4 +47,22 @@ def create_dataloader(cfg, data):
 	                        sampler=sampler,\
 	                        batch_size=cfg['batch_size'],
 	                        num_workers=cfg['num_workers'])
+	return dataloader
+
+def create_dataloader_tpu(cfg, data):
+	X = data["features"].values.tolist()
+	masks = data["masks"].values.tolist()
+	label_cols =data.columns.values.tolist()[1:-2]
+	y = label_encoder_df(data[label_cols]).values.tolist()
+
+	X = torch.tensor(X)
+
+	y = torch.tensor(np.array([onehot_enconder(lb, len(cfg['labels'])) for lb in y]))
+
+	masks = torch.tensor(masks, dtype=torch.long)
+
+
+	sampler = torch.utils.data.distributed.DistributedSampler(dataset, num_replicas=xm.xrt_world_size(), rank=xm.get_ordinal(), shuffle=True)
+	dataloader = torch.utils.data.DataLoader(dataset, sampler=sampler, batch_size=cfg['batch_size'], num_workers=cfg['num_workers'])
+
 	return dataloader

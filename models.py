@@ -55,7 +55,7 @@ class AsMil(nn.Module):
     self.aspect_num= len(self.aspect)
     self.polarity_num= len(self.polarites)
     self.word_embedding_dim=self.embedder.get_output_dim()
-    self.aspect_loss= nn.BCEWithLogitsLoss()
+    self.aspect_loss= nn.BCEWithLogitsLoss(reduce=False)
     self.sentiment_loss= nn.CrossEntropyLoss(reduce=False)
     self.log_vars = nn.Parameter(torch.zeros((self.aspect_num*2)))
 
@@ -160,7 +160,7 @@ class AsMil(nn.Module):
       loss = 0 
       for i in range(self.aspect_num):
         #classfication loss
-        aspect_loss_total += self.aspect_loss(final_category_outputs[i].squeeze(dim=-1), aspect_labels[i])
+        aspect_loss_total += self.aspect_loss(final_category_outputs[i].squeeze(dim=-1), aspect_labels[i]).mean()
         
         #sentiment loss 
         if not(polarity_labels[i].isnan().all()):
