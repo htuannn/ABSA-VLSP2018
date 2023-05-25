@@ -1,11 +1,10 @@
 import torch
 import torch.nn as nn
 import numpy as np
-import yaml
 import os
 from transformers import AutoModel
 
-class PhoBertFeatureExtraction(torch.nn.Module):
+class PhoBertFeatureExtraction(nn.Module):
   def __init__(self, cfg) -> None:
     super(PhoBertFeatureExtraction, self).__init__()
     self.cfg= cfg
@@ -45,7 +44,7 @@ class PhoBertFeatureExtraction(torch.nn.Module):
     output_dim= self.state_dict()['phobert.embeddings.word_embeddings.weight'].shape[1]
     return output_dim
     
-class AsMil(torch.nn.Module):
+class AsMil(nn.Module):
   def __init__(self, cfg) -> None:
     super(AsMil, self).__init__()
     self.cfg= cfg
@@ -56,16 +55,16 @@ class AsMil(torch.nn.Module):
     self.aspect_num= len(self.aspect)
     self.polarity_num= len(self.polarites)
     self.word_embedding_dim=self.embedder.get_output_dim()
-    self.aspect_loss= torch.nn.BCEWithLogitsLoss()
-    self.sentiment_loss= torch.nn.CrossEntropyLoss(reduce=False)
+    self.aspect_loss= nn.BCEWithLogitsLoss()
+    self.sentiment_loss= nn.CrossEntropyLoss(reduce=False)
     self.log_vars = nn.Parameter(torch.zeros((self.aspect_num*2)))
 
     lstm_input_size= self.embedder.get_output_dim()
 
-    self.embedding_layer_fc = torch.nn.Linear(self.word_embedding_dim, self.word_embedding_dim, bias=True)
-    self.lstm = torch.nn.LSTM(lstm_input_size, int(self.word_embedding_dim / 2), batch_first=True,
+    self.embedding_layer_fc = nn.Linear(self.word_embedding_dim, self.word_embedding_dim, bias=True)
+    self.lstm = nn.LSTM(lstm_input_size, int(self.word_embedding_dim / 2), batch_first=True,
                           bidirectional=True, num_layers=self.cfg['num_layers_lstm'], dropout=0.5)
-    torch.nn.init.xavier_normal_(self.embedding_layer_fc.weight)
+    nn.init.xavier_normal_(self.embedding_layer_fc.weight)
 
     self.embedding_layer_aspect_attentions = nn.ModuleList()
     for AttentionInHtt_idx in range(self.aspect_num):
@@ -74,13 +73,13 @@ class AsMil(torch.nn.Module):
 
     self.category_fcs = nn.ModuleList()
     for layer_idx in range(self.aspect_num):
-      self.category_fcs.append(torch.nn.Linear(self.word_embedding_dim, 1))
+      self.category_fcs.append(nn.Linear(self.word_embedding_dim, 1))
 
     self.sentiment_fcs = nn.ModuleList()
     for layer_idx in range(self.aspect_num):
-      self.sentiment_fcs.append(torch.nn.Sequential(torch.nn.Linear(self.word_embedding_dim, self.word_embedding_dim),\
-                                                    torch.nn.GELU(),\
-                                                    torch.nn.Linear(self.word_embedding_dim, self.polarity_num)))
+      self.sentiment_fcs.append(nn.Sequential(nn.Linear(self.word_embedding_dim, self.word_embedding_dim),\
+                                                    nn.GELU(),\
+                                                    nn.Linear(self.word_embedding_dim, self.polarity_num)))
     
   def forward(self, input_ids, token_type_ids=None,\
               attention_mask=None, labels=None) -> dict:
@@ -138,7 +137,7 @@ class AsMil(torch.nn.Module):
       final_sentiment_outputs.append(sentiment_output)
       
     pred_categorys= np.array([torch.sigmoid(e).detach().cpu().numpy() for e in final_category_outputs]).transpose(1,0,2)
-    pred_sentiments= np.array([torch.nn.functional.softmax(e, dim=-1).detach().cpu().numpy() for e in final_sentiment_outputs]).transpose(1,0,2)
+    pred_sentiments= np.array([nn.functional.softmax(e, dim=-1).detach().cpu().numpy() for e in final_sentiment_outputs]).transpose(1,0,2)
 
     output={}
     if labels is None:
@@ -183,15 +182,15 @@ class AsMil(torch.nn.Module):
       output['sent_loss']= sent_loss_total
     return output
 
-class AttentionInHtt(torch.nn.Module):
+class AttentionInHtt(nn.Module):
     """
     2016-Hierarchical Attention Networks for Document Classification
     """
 
     def __init__(self, in_features, out_features, bias=True, softmax=True) -> None:
         super().__init__()
-        self.W = torch.nn.Linear(in_features, out_features, bias)
-        self.uw = torch.nn.Linear(out_features, 1, bias=False)
+        self.W = nn.Linear(in_features, out_features, bias)
+        self.uw = nn.Linear(out_features, 1, bias=False)
         if softmax:
           self.softmax = MaskedSoftmax()
         else:
