@@ -1,0 +1,7 @@
+transformers
+underthesea
+regrex
+PyYAML
+torch
+tqdm
+matplotlib
