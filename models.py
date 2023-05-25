@@ -55,8 +55,8 @@ class AsMil(nn.Module):
     self.aspect_num= len(self.aspect)
     self.polarity_num= len(self.polarites)
     self.word_embedding_dim=self.embedder.get_output_dim()
-    self.aspect_loss= nn.BCEWithLogitsLoss(reduce=False)
-    self.sentiment_loss= nn.CrossEntropyLoss(reduce=False)
+    self.aspect_loss= nn.BCEWithLogitsLoss(reduce='none')
+    self.sentiment_loss= nn.CrossEntropyLoss(reduce='none')
     self.log_vars = nn.Parameter(torch.zeros((self.aspect_num*2)))
 
     lstm_input_size= self.embedder.get_output_dim()

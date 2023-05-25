@@ -3,16 +3,25 @@ import yaml
 import os
 
 
-def save_model(model, save_path, epochs, lowest_eval_loss, train_loss_hist, valid_loss_hist):
+def save_model(model, save_path, epochs, lowest_eval_loss, train_loss_hist, valid_loss_hist, optimizer=None):
   model_to_save = model.module if hasattr(model, 'module') else model
   state_dict = {key: value for key, value in model_to_save.state_dict().items() if 'embedder' not in key}
-
-  checkpoint = {'epochs': epochs, \
-                'lowest_eval_loss': lowest_eval_loss,\
-                'state_dict': state_dict,\
-                'train_loss_hist': train_loss_hist,\
-                'valid_loss_hist': valid_loss_hist
-               }
+  if optimizer is not None:
+    optimizer_state_dict= optimizer.state_dict()
+    checkpoint = {'epochs': epochs, \
+                  'lowest_eval_loss': lowest_eval_loss,\
+                  'state_dict': state_dict,\
+                  'optimizer_state_dict': optimizer_state_dict,\
+                  'train_loss_hist': train_loss_hist,\
+                  'valid_loss_hist': valid_loss_hist
+                 }
+  else: 
+    checkpoint = {'epochs': epochs, \
+              'lowest_eval_loss': lowest_eval_loss,\
+              'state_dict': state_dict,\
+              'train_loss_hist': train_loss_hist,\
+              'valid_loss_hist': valid_loss_hist
+             }
   del state_dict
   try:
     os.makedirs("/".join(save_path.split("/")[:-1]))
@@ -23,7 +32,7 @@ def save_model(model, save_path, epochs, lowest_eval_loss, train_loss_hist, vali
                                                                      lowest_eval_loss))
   return
 
-def load_model(model, save_path):
+def load_model(model, save_path, optimizer= None):
   checkpoint = torch.load(save_path)
   model_state_dict = checkpoint['state_dict']
 
@@ -51,4 +60,11 @@ def load_model(model, save_path):
   valid_loss_hist = checkpoint["valid_loss_hist"]
 
   print(fine_tuning_log)
+  if optimizer is not None:
+    try:
+      optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+      print("### Loading optimizer state dict\n")
+    except:
+      pass
+    return model, epochs, lowest_eval_loss, train_loss_hist, valid_loss_hist, optimizer
   return model, epochs, lowest_eval_loss, train_loss_hist, valid_loss_hist

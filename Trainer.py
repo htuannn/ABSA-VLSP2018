@@ -114,13 +114,13 @@ def fit(model, num_epochs,\
       lowest_eval_loss = epoch_eval_loss
       # save model
       save_model(model, model_save_path, actual_epoch,\
-                 lowest_eval_loss, train_loss_set, valid_loss_set)
+                 lowest_eval_loss, train_loss_set, valid_loss_set, optimizer)
     else:
       if epoch_eval_loss < lowest_eval_loss:
         lowest_eval_loss = epoch_eval_loss
         # save model
         save_model(model, model_save_path, actual_epoch,\
-                   lowest_eval_loss, train_loss_set, valid_loss_set)
+                   lowest_eval_loss, train_loss_set, valid_loss_set, optimizer)
     print("\n")
 
   return model, train_loss_set, valid_loss_set
@@ -141,19 +141,18 @@ if __name__ == "__main__":
   train_dataloader = create_dataloader(cfg, train)
   val_dataloader = create_dataloader(cfg, val)
 
-  model= AsMil(cfg).to(cfg['device'])
+  model= AsMil(cfg)
   model.embedder.freeze_PhoBert_decoder()
+  optimizer = AdamW(model.parameters(), lr=cfg['lr'], weight_decay=cfg['weight_decay'], correct_bias=False)
+
   try:
-    model, start_epochs, lowest_eval_loss, train_loss_hist, valid_loss_hist = load_model(model, cfg['saved_model'])
+    model, start_epochs, lowest_eval_loss, train_loss_hist, valid_loss_hist, optimizer= load_model(model, cfg['saved_model'], optimizer)
   except:
     start_epochs = 0
     lowest_eval_loss = None
     train_loss_hist = []
     valid_loss_hist = []
-  
-  optimizer = AdamW([{'params': model.category_fcs.parameters()},
-                   {'params': model.sentiment_fcs.parameters(), 'lr': cfg['lr_sentiment']}
-                  ], lr=cfg['lr'], weight_decay=cfg['weight_decay'], correct_bias=False)
+  model= model.to(cfg['device'])
 
   model, train_loss_set, valid_loss_set = fit(model=model,\
                                               num_epochs=cfg['num_epochs'],\
