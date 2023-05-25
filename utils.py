@@ -51,21 +51,6 @@ def txt2df(filepath, aspect):
 
     return df
 
-def preprocess_fn(text, word_tokenize = None):
-    sent = re.sub(r'[^\w\s]', '', text.strip())
-    tokens = sent.split()
-    for token in tokens:
-        for t in token:
-            if t.isnumeric() or t.isdigit():
-                tokens.remove(token)
-                break
-    if word_tokenize is None:
-        return underthesea.word_tokenize(" ".join(tokens), format="text")
-
-    tokens = word_tokenize.tokenize(" ".join(tokens))[0]
-    #tokens = word_tokenize(" ".join(tokens), format="text")
-    return " ".join(tokens)
-
 def tokenize_inputs(text_list, tokenizer, num_embeddings=512):
     # Tokenize the text, then truncate sequence to the desired length minus 2 for the 2 special characters
     tokenized_texts = list(map(lambda t: tokenizer.tokenize(t)[:num_embeddings-2], text_list))

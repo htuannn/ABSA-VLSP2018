@@ -177,8 +177,8 @@ class AsMil(nn.Module):
         #  sent_loss_total+=mean_sent_loss
 
 
-      output['loss']= aspect_loss_total+ sent_loss_total
-      output['aspect_loss']= aspect_loss_total
+      output['loss']= 1.5*aspect_loss_total+ sent_loss_total
+      output['aspect_loss']= 1.5*aspect_loss_total
       output['sent_loss']= sent_loss_total
     return output
 

@@ -8,6 +8,9 @@ from transformers import AdamW, AutoModel, AutoTokenizer
 
 import torch
 import torch.nn as nn
+import torch_xla
+import torch_xla.core.xla_model as xm
+import torch_xla.distributed.xla_multiprocessing as xmp
 from models import *
 from dataset import *
 from model_utils import *
@@ -124,45 +127,50 @@ def fit(model, num_epochs,\
     print("\n")
 
   return model, train_loss_set, valid_loss_set
+  
+def train_fn(device, cfg):
+    with open('config/absa_model.yaml') as f:
+        cfg = yaml.load(f, Loader=yaml.SafeLoader)
+        cfg['device'] = device
+        print(f"### Loading config {cfg}")
 
-def hook_fn(grad):
-    print(grad)  # print grad value
+    tokenizer = AutoTokenizer.from_pretrained(cfg['pretrained'])
+    train = load_dataset_by_filepath(cfg, cfg['train_file'], tokenizer=tokenizer)
+    val = load_dataset_by_filepath(cfg, cfg['val_file'], tokenizer=tokenizer)
+
+    train_dataloader = create_dataloader(cfg, train)
+    val_dataloader = create_dataloader(cfg, val)
+
+    model = AsMil(cfg).to(device)
+    model.embedder.freeze_PhoBert_decoder()
+    try:
+        model, start_epochs, lowest_eval_loss, train_loss_hist, valid_loss_hist = load_model(model, cfg['saved_model'])
+    except:
+        start_epochs = 0
+        lowest_eval_loss = None
+        train_loss_hist = []
+        valid_loss_hist = []
+
+    optimizer = AdamW([{'params': model.category_fcs.parameters()},
+                       {'params': model.sentiment_fcs.parameters(), 'lr': cfg['lr_sentiment']}
+                      ], lr=cfg['lr'], weight_decay=cfg['weight_decay'], correct_bias=False)
+
+    model, train_loss_set, valid_loss_set = fit(model=model,
+                                                num_epochs=cfg['num_epochs'],
+                                                optimizer=optimizer,
+                                                train_dataloader=train_dataloader,
+                                                valid_dataloader=val_dataloader,
+                                                model_save_path=cfg['model_save_path'],
+                                                train_loss_set=train_loss_hist, valid_loss_set=valid_loss_hist,
+                                                lowest_eval_loss=lowest_eval_loss,
+                                                start_epoch=start_epochs,
+                                                device=device)
+
+    return model, train_loss_set, valid_loss_set
+
+def _mp_fn(rank, flags):
+    device = xm.xla_device()
+    model, train_loss_set, valid_loss_set = train_fn(device, flags)
 
 if __name__ == "__main__":
-  with open('config/absa_model.yaml') as f:
-    cfg = yaml.load(f, Loader=yaml.SafeLoader)
-    cfg['device']= torch.device("cuda:0" if torch.cuda.is_available() else "cpu") 
-    print(f"### Loading config {cfg}")
-
-  tokenizer = AutoTokenizer.from_pretrained(cfg['pretrained'])
-  train = load_dataset_by_filepath(cfg, cfg['train_file'], tokenizer= tokenizer)
-  val = load_dataset_by_filepath(cfg, cfg['val_file'], tokenizer= tokenizer)
-
-  train_dataloader = create_dataloader(cfg, train)
-  val_dataloader = create_dataloader(cfg, val)
-
-  model= AsMil(cfg).to(cfg['device'])
-  model.embedder.freeze_PhoBert_decoder()
-  try:
-    model, start_epochs, lowest_eval_loss, train_loss_hist, valid_loss_hist = load_model(model, cfg['saved_model'])
-  except:
-    start_epochs = 0
-    lowest_eval_loss = None
-    train_loss_hist = []
-    valid_loss_hist = []
-  
-  optimizer = AdamW([{'params': model.category_fcs.parameters()},
-                   {'params': model.sentiment_fcs.parameters(), 'lr': cfg['lr_sentiment']}
-                  ], lr=cfg['lr'], weight_decay=cfg['weight_decay'], correct_bias=False)
-
-  model, train_loss_set, valid_loss_set = fit(model=model,\
-                                              num_epochs=cfg['num_epochs'],\
-                                              optimizer=optimizer,\
-                                              train_dataloader=train_dataloader,\
-                                              valid_dataloader=val_dataloader,\
-                                              model_save_path=cfg['model_save_path'],\
-                                              train_loss_set= train_loss_hist, valid_loss_set= valid_loss_hist,\
-                                              lowest_eval_loss= lowest_eval_loss,\
-                                              start_epoch= start_epochs,\
-                                              device=cfg['device'])
-
+    xmp.spawn(_mp_fn, args=(cfg,), nprocs=num_tpu_cores, start_method='fork')

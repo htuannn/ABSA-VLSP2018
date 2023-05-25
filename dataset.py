@@ -6,6 +6,7 @@ import numpy as np
 import underthesea
 from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
 from utils import *
+from preprocess import preprocess_fn
 
 def load_dataset_by_filepath(cfg, file_path=None, tokenizer= None):
 		if file_path is None or os.path.exists(file_path) is False:

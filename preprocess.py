@@ -202,6 +202,8 @@ def preprocess_fn(text, word_tokenize = None):
     text = convert_unicode(text) 
     text = standardize_sentence_typing(text)
     text = normalize_acronyms(text)
+    
+    tokens = text.split()
     if word_tokenize is None:
         text= underthesea.word_tokenize(" ".join(tokens), format="text")
     else:
