@@ -8,7 +8,7 @@ from torch.utils.data import TensorDataset, DataLoader, RandomSampler, Sequentia
 from utils import *
 from preprocess import preprocess_fn
 
-import torch_xla.core.xla_model as xm
+#import torch_xla.core.xla_model as xm
 
 def load_dataset_by_filepath(cfg, file_path=None, tokenizer= None):
 		if file_path is None or os.path.exists(file_path) is False:

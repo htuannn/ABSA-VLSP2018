@@ -142,7 +142,7 @@ class AsMil(nn.Module):
     output={}
     if labels is None:
       predict=[]
-      for (pred_category, pred_sentiment)  in zip(pred_categorys,pred_sentiments):
+      for (pred_category, pred_sentiment) in zip(pred_categorys,pred_sentiments):
         pred={}
         for i in range(self.aspect_num):
           if pred_category[i] >= 0.5:
@@ -177,11 +177,37 @@ class AsMil(nn.Module):
         #  sent_loss_total+=mean_sent_loss
 
 
-      output['loss']= 1.5*aspect_loss_total+ sent_loss_total
-      output['aspect_loss']= 1.5*aspect_loss_total
+      output['loss']= self.cfg['acd_loss_coef']*aspect_loss_total+ sent_loss_total
+      output['aspect_loss']= self.cfg['acd_loss_coef']*aspect_loss_total
       output['sent_loss']= sent_loss_total
     return output
 
+    def set_grad_for_acd_parameter(self, requires_grad=False):
+      acd_layers=[]
+      acd_layers.append(self.embedding_layer_fc)
+      acd_layers.append(self.category_fcs)
+      acd_layers.append(self.embedding_layer_aspect_attentions)
+      for layer in acd_layers:
+        for param in layer.parameters():
+          param.requires_grad = requires_grad
+        
+    def set_grad_for_acsc_parameter(self, requires_grad=False):
+      acsc_layers=[]
+      if self.cfg['use_lstm']:
+        acsc_layers.append(self.lstm)
+      acsc_layers.append(self.sentiment_fcs)
+      for layer in acsc_layers:
+        for param in layer.parameters():
+          param.requires_grad = requires_grad
+
+    def set_requires_grad(self, nets, requires_grad=False):
+        if not isinstance(nets, list):
+            nets = [nets]
+        for net in nets:
+            if net is not None:
+                for param in net.parameters():
+                    param.requires_grad = requires_grad
+                    
 class AttentionInHtt(nn.Module):
     """
     2016-Hierarchical Attention Networks for Document Classification

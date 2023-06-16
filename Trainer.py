@@ -4,8 +4,8 @@ import yaml
 from tqdm import tqdm, trange
 import matplotlib.pyplot as plt
 
-from transformers import AdamW, AutoModel, AutoTokenizer
-
+from transformers import AutoModel, AutoTokenizer
+from torch.optim import AdamW
 import torch
 import torch.nn as nn
 from models import *
@@ -54,8 +54,6 @@ def fit(model, num_epochs,\
       num_train_samples += b_labels.size(0)
 
       # Backward pass
-      #output['aspect_loss'].backward(retain_graph=True)
-      #output['sent_loss'].backward()
       output['loss'].backward()
 
       #for name, param in model.sentiment_fcs.named_parameters():
@@ -142,8 +140,17 @@ if __name__ == "__main__":
   val_dataloader = create_dataloader(cfg, val)
 
   model= AsMil(cfg)
-  model.embedder.freeze_PhoBert_decoder()
-  optimizer = AdamW(model.parameters(), lr=cfg['lr'], weight_decay=cfg['weight_decay'], correct_bias=False)
+  if cfg['freeze_embedder']:
+    model.embedder.freeze_PhoBert_decoder()
+
+  if cfg['acd_only'] && cfg['acsc_only']:
+    print('Warning no layers require grad!!\n')
+  if cfg['acd_only']:
+    model.set_grad_for_acd_parameter()
+  if cfg['acsc_only']:
+    model.set_grad_for_acsc_parameter()
+
+  optimizer = AdamW(model.parameters(), lr=cfg['lr'], weight_decay=cfg['weight_decay'])
 
   try:
     model, start_epochs, lowest_eval_loss, train_loss_hist, valid_loss_hist, optimizer= load_model(model, cfg['saved_model'], optimizer)

@@ -28,9 +28,12 @@ train_file: data/1-VLSP2018-SA-Restaurant-train (7-3-2018).txt
 val_file: data/2-VLSP2018-SA-Restaurant-dev (7-3-2018).txt
 test_file: data/3-VLSP2018-SA-Restaurant-test (8-3-2018).txt
 
-lr_sentiment: 0.001
+freeze_embedder: True
+acd_only: True
+acsc_only: False
 lr: 0.001
 weight_decay: 0.01
+acd_loss_coef: 1.5 
 
 saved_model: log/model_absa.bin
 model_save_path: log/model_absa.bin
