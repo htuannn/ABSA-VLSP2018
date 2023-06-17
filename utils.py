@@ -11,7 +11,7 @@ import os
 
 def label_encoder(label, aspects):
     y = [np.nan] * len(aspects)
-    ap_stm = re.findall('{(.+?), ([a-z]+)}', label)
+    ap_stm = re.findall('{(.+?), (\w+)}', label)
 
     for aspect, sentiment in ap_stm:
         idx = aspects.index(aspect)

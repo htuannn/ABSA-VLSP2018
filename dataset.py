@@ -2,6 +2,7 @@ import sys
 import os
 import yaml
 import torch
+import pandas as pd
 import numpy as np
 import underthesea
 from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
@@ -33,7 +34,7 @@ def create_dataloader(cfg, data):
 	X = data["features"].values.tolist()
 	masks = data["masks"].values.tolist()
 	label_cols =data.columns.values.tolist()[1:-2]
-	y = label_encoder_df(data[label_cols]).values.tolist()
+	y = label_encoder_df(data[label_cols].applymap(lambda x: x.lower() if pd.notnull(x) else x)).values.tolist()
 
 	X = torch.tensor(X)
 
@@ -53,7 +54,7 @@ def create_dataloader_tpu(cfg, data):
 	X = data["features"].values.tolist()
 	masks = data["masks"].values.tolist()
 	label_cols =data.columns.values.tolist()[1:-2]
-	y = label_encoder_df(data[label_cols]).values.tolist()
+	y = label_encoder_df(data[label_cols].applymap(lambda x: x.lower() if pd.notnull(x) else x)).values.tolist()
 
 	X = torch.tensor(X)
 

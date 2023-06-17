@@ -38,7 +38,7 @@ def fit(model, num_epochs,\
     num_train_samples = 0
 
     # Train the data for one epoch
-    for step, batch in enumerate(train_dataloader):
+    for step, batch in trange(enumerate(train_dataloader)):
       # Add batch to GPU
       batch = tuple(t.to(device) for t in batch)
       # Unpack the inputs from our dataloader
@@ -139,16 +139,7 @@ if __name__ == "__main__":
   train_dataloader = create_dataloader(cfg, train)
   val_dataloader = create_dataloader(cfg, val)
 
-  model= AsMil(cfg)
-  if cfg['freeze_embedder']:
-    model.embedder.freeze_PhoBert_decoder()
-
-  if cfg['acd_only'] && cfg['acsc_only']:
-    print('Warning no layers require grad!!\n')
-  if cfg['acd_only']:
-    model.set_grad_for_acd_parameter()
-  if cfg['acsc_only']:
-    model.set_grad_for_acsc_parameter()
+  model= AsMil(cfg).to(cfg['device'])
 
   optimizer = AdamW(model.parameters(), lr=cfg['lr'], weight_decay=cfg['weight_decay'])
 
@@ -159,7 +150,38 @@ if __name__ == "__main__":
     lowest_eval_loss = None
     train_loss_hist = []
     valid_loss_hist = []
-  model= model.to(cfg['device'])
+    
+  if cfg['freeze_embedder']:
+    print('Freeze embedder layer (set requires_grad=False)!!\n')
+    model.embedder.freeze_PhoBert_encoder()
+
+  if cfg['acd_only'] & cfg['acsc_only']:
+    print('Warning!! No layer requires grad!!\n')
+  if cfg['acd_warmup']:
+    optimizer_warmup = AdamW(model.parameters(), lr=cfg['lr'], weight_decay=cfg['weight_decay'])
+    model.set_grad_for_acsc_parameter(requires_grad= False)
+    model, train_loss_set, valid_loss_set = fit(model=model,\
+                                                num_epochs=cfg['acd_warmup'],\
+                                                optimizer=optimizer_warmup,\
+                                                train_dataloader=train_dataloader,\
+                                                valid_dataloader=val_dataloader,\
+                                                model_save_path=cfg['model_save_path'],\
+                                                train_loss_set= train_loss_hist, valid_loss_set= valid_loss_hist,\
+                                                lowest_eval_loss= lowest_eval_loss,\
+                                                start_epoch= 0,\
+                                                device=cfg['device'])
+    #load best model warmup phase
+    model, _, _, train_loss_hist, valid_loss_hist, _= load_model(model, cfg['saved_model'])
+    model.set_grad_for_acsc_parameter(requires_grad= True)
+    
+  if cfg['acd_only']:
+    print('Freeze sentiment layers (set requires_grad=False)!!\n')
+    model.set_grad_for_acd_parameter(requires_grad= True)
+    model.set_grad_for_acsc_parameter(requires_grad= False)
+  if cfg['acsc_only']:
+    print('Freeze categorical_detection layers (set requires_grad=False)!!\n')
+    model.set_grad_for_acsc_parameter(requires_grad= True)
+    model.set_grad_for_acd_parameter(requires_grad= False)
 
   model, train_loss_set, valid_loss_set = fit(model=model,\
                                               num_epochs=cfg['num_epochs'],\

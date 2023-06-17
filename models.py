@@ -27,14 +27,14 @@ class PhoBertFeatureExtraction(nn.Module):
     mean_last_hidden_state = torch.mean(last_hidden_state, 1)
     return mean_last_hidden_state
 
-  def freeze_PhoBert_decoder(self):
+  def freeze_PhoBert_encoder(self):
     """
     Freeze PhoBert weight parameters. They will not be updated during training.
     """
     for param in self.phobert.parameters():
       param.requires_grad = False
     
-  def unfreeze_PhoBert_decoder(self):
+  def unfreeze_PhoBert_encoder(self):
     """
     Unfreeze PhoBert weight parameters. They will be updated during training.
     """
@@ -80,7 +80,9 @@ class AsMil(nn.Module):
       self.sentiment_fcs.append(nn.Sequential(nn.Linear(self.word_embedding_dim, self.word_embedding_dim),\
                                                     nn.GELU(),\
                                                     nn.Linear(self.word_embedding_dim, self.polarity_num)))
-    
+    self.dropout_after_embedding_layer = nn.Dropout(0.5)
+    self.dropout_after_lstm_layer = nn.Dropout(0.5)  
+
   def forward(self, input_ids, token_type_ids=None,\
               attention_mask=None, labels=None) -> dict:
     # word_embedding
@@ -93,8 +95,10 @@ class AsMil(nn.Module):
                                     attention_mask=attention_mask,\
                                     labels= labels)
     word_embeddings_fc= self.embedding_layer_fc(embedding_feture)
+    embedding_feture= self.dropout_after_embedding_layer(embedding_feture)
     if self.cfg['use_lstm']:
       lstm_result, _ = self.lstm(embedding_feture)
+      lstm_result = self.dropout_after_lstm_layer(lstm_result)
     embedding_layer_category_outputs = []
     embedding_layer_category_alphas = []
     embedding_layer_sentiment_outputs = []
@@ -176,37 +180,39 @@ class AsMil(nn.Module):
         #if not(mean_sent_loss.isnan()):
         #  sent_loss_total+=mean_sent_loss
 
-
-      output['loss']= self.cfg['acd_loss_coef']*aspect_loss_total+ sent_loss_total
-      output['aspect_loss']= self.cfg['acd_loss_coef']*aspect_loss_total
-      output['sent_loss']= sent_loss_total
+      if acd_warmup: 
+        output['loss'] = self.cfg['acd_loss_weight']*aspect_loss_total
+      else: 
+        output['loss']= self.cfg['acd_loss_weight']*aspect_loss_total+ self.cfg['acsc_loss_weight']sent_loss_total
+      output['aspect_loss']= self.cfg['acd_loss_weight']*aspect_loss_total
+      output['sent_loss']= self.cfg['acsc_loss_weight']*sent_loss_total
     return output
 
-    def set_grad_for_acd_parameter(self, requires_grad=False):
-      acd_layers=[]
-      acd_layers.append(self.embedding_layer_fc)
-      acd_layers.append(self.category_fcs)
-      acd_layers.append(self.embedding_layer_aspect_attentions)
-      for layer in acd_layers:
-        for param in layer.parameters():
-          param.requires_grad = requires_grad
-        
-    def set_grad_for_acsc_parameter(self, requires_grad=False):
-      acsc_layers=[]
-      if self.cfg['use_lstm']:
-        acsc_layers.append(self.lstm)
-      acsc_layers.append(self.sentiment_fcs)
-      for layer in acsc_layers:
-        for param in layer.parameters():
-          param.requires_grad = requires_grad
+  def set_grad_for_acd_parameter(self, requires_grad=False):
+    acd_layers=[]
+    acd_layers.append(self.embedding_layer_fc)
+    acd_layers.append(self.category_fcs)
+    acd_layers.append(self.embedding_layer_aspect_attentions)
+    for layer in acd_layers:
+      for param in layer.parameters():
+        param.requires_grad = requires_grad
+      
+  def set_grad_for_acsc_parameter(self, requires_grad=False):
+    acsc_layers=[]
+    if self.cfg['use_lstm']:
+      acsc_layers.append(self.lstm)
+    acsc_layers.append(self.sentiment_fcs)
+    for layer in acsc_layers:
+      for param in layer.parameters():
+        param.requires_grad = requires_grad
 
-    def set_requires_grad(self, nets, requires_grad=False):
-        if not isinstance(nets, list):
-            nets = [nets]
-        for net in nets:
-            if net is not None:
-                for param in net.parameters():
-                    param.requires_grad = requires_grad
+  def set_requires_grad(self, nets, requires_grad=False):
+      if not isinstance(nets, list):
+          nets = [nets]
+      for net in nets:
+          if net is not None:
+              for param in net.parameters():
+                  param.requires_grad = requires_grad
                     
 class AttentionInHtt(nn.Module):
     """

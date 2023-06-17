@@ -29,11 +29,12 @@ val_file: data/2-VLSP2018-SA-Restaurant-dev (7-3-2018).txt
 test_file: data/3-VLSP2018-SA-Restaurant-test (8-3-2018).txt
 
 freeze_embedder: True
-acd_only: True
+acd_warmup: 30
+acd_only: false
 acsc_only: False
 lr: 0.001
-weight_decay: 0.01
-acd_loss_coef: 1.5 
+weight_decay: 0.00001
+acd_loss_weight: 1.5 
 
 saved_model: log/model_absa.bin
 model_save_path: log/model_absa.bin
