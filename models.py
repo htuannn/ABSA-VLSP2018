@@ -180,10 +180,14 @@ class AsMil(nn.Module):
         #if not(mean_sent_loss.isnan()):
         #  sent_loss_total+=mean_sent_loss
 
-      if acd_warmup: 
+      if self.cfg['acd_warmup']: 
         output['loss'] = self.cfg['acd_loss_weight']*aspect_loss_total
       else: 
-        output['loss']= self.cfg['acd_loss_weight']*aspect_loss_total+ self.cfg['acsc_loss_weight']sent_loss_total
+        if self.cfg['acd_only']:
+          output['loss'] = self.cfg['acd_loss_weight']*aspect_loss_total
+        elif self.cfg['acsc_only']:
+          output['loss'] = self.cfg['acsc_loss_weight']*sent_loss_total
+        else: output['loss'] = self.cfg['acd_loss_weight']*aspect_loss_total + self.cfg['acsc_loss_weight']*sent_loss_total
       output['aspect_loss']= self.cfg['acd_loss_weight']*aspect_loss_total
       output['sent_loss']= self.cfg['acsc_loss_weight']*sent_loss_total
     return output
