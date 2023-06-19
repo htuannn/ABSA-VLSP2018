@@ -1,15 +1,12 @@
 aspect:
-    - FOOD#PRICES
+    - HOTEL_ROOM#QUALITY
+    - HOTEL_ROOM#PRICES 
+    - HOTEL_ROOM#CLEANLINESS
+    - HOTEL_ROOM#GENERAL
+    - FACILITY#GENERAL
     - FOOD#QUALITY
-    - FOOD#STYLE&OPTIONS
-    - DRINKS#PRICES
-    - DRINKS#QUALITY
-    - DRINKS#STYLE&OPTIONS
-    - RESTAURANT#PRICES
-    - RESTAURANT#GENERAL
-    - RESTAURANT#MISCELLANEOUS
-    - SERVICE#GENERAL
-    - AMBIENCE#GENERAL
+    - FOOD#OPTION
+    - SERVICE#GENERAL 
     - LOCATION#GENERAL
 labels: 
     - negative
@@ -24,17 +21,17 @@ batch_size: 256
 num_workers: 2
 num_epochs: 30
 
-train_file: data/1-VLSP2018-SA-Restaurant-train (7-3-2018).txt
-val_file: data/2-VLSP2018-SA-Restaurant-dev (7-3-2018).txt
-test_file: data/3-VLSP2018-SA-Restaurant-test (8-3-2018).txt
+train_file: data/hotel_absa_train.txt
+val_file: data/hotel_absa_val.txt
+test_file: data/hotel_absa_test.txt
 
 freeze_embedder: True
 acd_warmup: 30
 acd_only: False
 acsc_only: False
-lr: 0.001
+lr: 0.00005
 weight_decay: 0.00001
-acd_loss_weight: 1.5 
+acd_loss_weight: 1.0 
 acsc_loss_weight: 1.0
 saved_model: log/model_absa.bin
 model_save_path: log/model_absa.bin
