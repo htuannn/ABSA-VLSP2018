@@ -5,6 +5,7 @@ from tqdm import tqdm, trange
 import matplotlib.pyplot as plt
 import pandas as pd
 
+from sklearn.metrics import classification_report
 from transformers import AutoModel, AutoTokenizer
 import torch
 import torch.nn as nn
@@ -93,22 +94,22 @@ if __name__ == "__main__":
   model= AsMil(cfg).to(cfg['device'])
   model, _ , _ , _ , _ = load_model(model, cfg['saved_model'])
   model.eval()
-  
+
   test = load_dataset_by_filepath(cfg, cfg['test_file'], tokenizer= tokenizer)
-  
+
   X = test["features"].values.tolist()
-	masks = test["masks"].values.tolist()
-	label_cols =test.columns.values.tolist()[1:-2]
-	y = label_encoder_df(test[label_cols].applymap(lambda x: x.lower() if pd.notnull(x) else x)).values.tolist()
-  
-	X = torch.tensor(X)
+  masks = test["masks"].values.tolist()
+  label_cols =test.columns.values.tolist()[1:-2]
+  y = label_encoder_df(test[label_cols].applymap(lambda x: x.lower() if pd.notnull(x) else x)).values.tolist()
 
-	y = torch.tensor(np.array([onehot_enconder(lb, len(cfg['labels'])) for lb in y]))
+  X = torch.tensor(X)
 
-	masks = torch.tensor(masks, dtype=torch.long)
+  y = torch.tensor(np.array([onehot_enconder(lb, len(cfg['labels'])) for lb in y]))
 
-	test_set = TensorDataset(X, masks, y)
-  
+  masks = torch.tensor(masks, dtype=torch.long)
+
+  test_set = TensorDataset(X, masks, y)
+
   pred= []
   for i in tqdm(range(len(test_set))):
     batch =  tuple(t.to(cfg['device']) for t in test_set[i])
