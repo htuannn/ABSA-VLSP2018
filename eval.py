@@ -13,15 +13,15 @@ from models import *
 from dataset import *
 from model_utils import *
 
-label_map= {'not_exist': -1,
-            'negative':0,
-            'neutral':1,
-            'positive':2}
+label_map= {'not_exist': 0,
+            'negative':1,
+            'neutral':2,
+            'positive':3}
 
-replacements={-1: 'None',
-              0: 'negative',
-              1: 'neutral',
-              2: 'positive'}
+replacements={0: 'None',
+              1: 'negative',
+              2: 'neutral',
+              3: 'positive'}
 target_names = list(map(str, replacements.values()))
 
 def aspect_detection_eval(y_test, y_pred):
