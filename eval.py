@@ -118,15 +118,15 @@ if __name__ == "__main__":
       output = model(b_input_ids.unsqueeze(0), attention_mask=b_input_mask.unsqueeze(0), labels=None)
     pred.append(output['predict'][0])
     
-y_pred=pd.DataFrame(pred)
-y_pred=y_pred.applymap(lambda x: x.lower() if pd.notnull(x) else x)
-categories= y_pred.columns
+  y_pred=pd.DataFrame(pred)
+  y_pred=y_pred.applymap(lambda x: x.lower() if pd.notnull(x) else x)
+  categories= y_pred.columns
 
-y_test=test.loc[:,categories]
-y_test=y_test.applymap(lambda x: x.lower() if pd.notnull(x) else x)
+  y_test=test.loc[:,categories]
+  y_test=y_test.applymap(lambda x: x.lower() if pd.notnull(x) else x)
 
-aspect_detection_eval(y_test, y_pred)
+  aspect_detection_eval(y_test, y_pred)
 
-sentiment_classification_eval(y_test, y_pred)
+  sentiment_classification_eval(y_test, y_pred)
 
-combination_eval(y_test, y_pred)
+  combination_eval(y_test, y_pred)
