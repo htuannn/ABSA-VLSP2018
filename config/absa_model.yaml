@@ -29,9 +29,11 @@ freeze_embedder: True
 acd_warmup: 30
 acd_only: False
 acsc_only: False
-lr: 0.00005
+lr: 0.00004
 weight_decay: 0.00001
-acd_loss_weight: 1.0 
+acd_loss_weight: 1.5 
 acsc_loss_weight: 1.0
+weight_BCE: 1.1,7.11,1.32,3.65,1.7,3.61,9.16,0.9,2.64
+weight_CE: 1.5,4.0,1.0 
 saved_model: log/model_absa.bin
 model_save_path: log/model_absa.bin
