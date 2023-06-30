@@ -55,8 +55,10 @@ class AsMil(nn.Module):
     self.aspect_num= len(self.aspect)
     self.polarity_num= len(self.polarites)
     self.word_embedding_dim=self.embedder.get_output_dim()
-    self.aspect_loss= nn.BCEWithLogitsLoss(reduce='none')
-    self.sentiment_loss= nn.CrossEntropyLoss(reduce='none')
+    self.weight_BCE= torch.Tensor(list(map(float,self.cfg['weight_BCE'].split(',')))).float() if 'weight_BCE' in self.cfg else None 
+    self.weight_CE= torch.Tensor(list(map(float,self.cfg['weight_CE'].split(',')))).float() if 'weight_BCE' in self.cfg else None
+    self.aspect_loss= nn.BCEWithLogitsLoss(pos_weight=self.weight_BCE)
+    self.sentiment_loss= nn.CrossEntropyLoss(reduce='none', weight= self.weight_CE)
     self.log_vars = nn.Parameter(torch.zeros((self.aspect_num*2)))
 
     lstm_input_size= self.embedder.get_output_dim()
@@ -144,6 +146,8 @@ class AsMil(nn.Module):
     pred_sentiments= np.array([nn.functional.softmax(e, dim=-1).detach().cpu().numpy() for e in final_sentiment_outputs]).transpose(1,0,2)
 
     output={}
+    output['pred_categorys']= pred_categorys
+    output['pred_sentiments']= pred_sentiments
     if labels is None:
       predict=[]
       for (pred_category, pred_sentiment) in zip(pred_categorys,pred_sentiments):
@@ -156,20 +160,22 @@ class AsMil(nn.Module):
         predict.append(pred)
       output['predict']= predict
     else:
-      aspect_labels = (~torch.isnan(labels)).all(axis=-1).clone().detach().type(torch.float).transpose(0,1)
+      aspect_labels = (~torch.isnan(labels)).all(axis=-1).clone().detach().type(torch.float)
+      aspect_labels_transpose = (~torch.isnan(labels)).all(axis=-1).clone().detach().type(torch.float).transpose(0,1)
       polarity_labels= labels.clone().detach().transpose(0,1)
 
       aspect_loss_total = 0
       sent_loss_total = 0
       loss = 0 
+
+      #classfication loss
+      aspect_loss_total= self.aspect_loss(torch.stack([out.squeeze(dim=-1) for out in final_category_outputs]).transpose(0,1), aspect_labels)    
+      
       for i in range(self.aspect_num):
-        #classfication loss
-        aspect_loss_total += self.aspect_loss(final_category_outputs[i].squeeze(dim=-1), aspect_labels[i]).mean()
-        
         #sentiment loss 
         if not(polarity_labels[i].isnan().all()):
-          sent_loss_total += self.sentiment_loss(final_sentiment_outputs[i][aspect_labels[i].bool()],\
-                                                 polarity_labels[i][aspect_labels[i].bool()]).mean()
+          sent_loss_total += self.sentiment_loss(final_sentiment_outputs[i][aspect_labels_transpose[i].bool()],\
+                                                 polarity_labels[i][aspect_labels_transpose[i].bool()]).mean()
 
         #sent_loss = torch.tensor([]).to(self.cfg['device'])
         #for ind,b in enumerate(polarity_labels[i]):
