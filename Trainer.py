@@ -127,7 +127,7 @@ def hook_fn(grad):
     print(grad)  # print grad value
 
 if __name__ == "__main__":
-  with open('config/absa_model.yaml') as f:
+  with open('config/vlsp2018.yaml') as f:
     cfg = yaml.load(f, Loader=yaml.SafeLoader)
     cfg['device']= torch.device("cuda:0" if torch.cuda.is_available() else "cpu") 
     print(f"### Loading config {cfg}")
