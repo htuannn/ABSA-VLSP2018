@@ -157,7 +157,7 @@ if __name__ == "__main__":
 
   if cfg['acd_only'] & cfg['acsc_only']:
     print('Warning!! No layer requires grad!!\n')
-    return
+    sys.exit()
   if cfg['acd_warmup']:
     optimizer_warmup = AdamW(model.parameters(), lr=cfg['lr'], weight_decay=cfg['weight_decay'])
     model.set_grad_for_acsc_parameter(requires_grad= False)
